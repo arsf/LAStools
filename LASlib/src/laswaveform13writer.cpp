@@ -193,50 +193,6 @@ BOOL LASwaveform13writer::open(const char* file_name, const LASvlr_wave_packet_d
     return FALSE;
   }
 
-  // write waveform descriptor cross-check
-
-  char magic[25];
-  sprintf(magic, "LAStools waveform %d", LAS_TOOLS_VERSION);
-
-  if (!stream->putBytes((U8*)magic, 24))
-  {
-    fprintf(stderr,"ERROR: writing waveform descriptor cross-check\n");
-    return FALSE;
-  }
-
-  if (!stream->put16bitsLE((U8*)&number))
-  {
-    fprintf(stderr,"ERROR: writing number of waveform descriptors\n");
-    return FALSE;
-  }
-
-  for (i = 0; i < 256; i++)
-  {
-    if (waveforms[i])
-    {
-      if (!stream->put16bitsLE((U8*)&i))
-      {
-        fprintf(stderr,"ERROR: writing index of waveform descriptor %d\n", i);
-        return FALSE;
-      }
-      if (!stream->putByte(waveforms[i]->compression))
-      {
-        fprintf(stderr,"ERROR: writing compression of waveform descriptor %d\n", i);
-        return FALSE;
-      }
-      if (!stream->putByte(waveforms[i]->nbits))
-      {
-        fprintf(stderr,"ERROR: writing nbits of waveform descriptor %d\n", i);
-        return FALSE;
-      }
-      if (!stream->put16bitsLE((U8*)&(waveforms[i]->nsamples)))
-      {
-        fprintf(stderr,"ERROR: writing nsamples of waveform descriptor %d\n", i);
-        return FALSE;
-      }
-    }
-  }
-
   // create compressor
 
   if (compressed)

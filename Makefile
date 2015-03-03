@@ -19,6 +19,7 @@ clobber:
 
 install:
 	cd LASlib && make install PREFIX=${PREFIX}
+	cd LASzip && make install PREFIX=${PREFIX}
 	install -d ${EXEC_PREFIX}
 	install -C -m 0755 bin/las2las ${EXEC_PREFIX}
 	install -C -m 0755 bin/las2txt ${EXEC_PREFIX}

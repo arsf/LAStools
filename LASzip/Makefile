@@ -1,3 +1,7 @@
+PPREFIX=/usr/local
+INCLUDEDIR = ${PREFIX}/include
+LIBDIR= ${PREFIX}/lib64
+
 all:
 	cd example && make
 
@@ -7,4 +11,8 @@ clean:
 
 clobber:
 	cd example && make clobber
-	rm -f src/*.o	
+	rm -f src/*.o
+
+install:
+	install -d ${INCLUDEDIR}/laslib
+	install -C -m 0644 src/*.hpp ${INCLUDEDIR}/laslib

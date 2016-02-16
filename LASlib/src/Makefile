@@ -8,10 +8,10 @@ AR  = ar rc
 
 INCLUDE = -I/usr/include/ -I../../LASzip/src -I../inc -I.
 
-OBJ_LAS = lasreader.o laswriter.o lasreader_las.o lasreader_bin.o lasreader_qfit.o lasreader_shp.o lasreader_asc.o lasreader_bil.o lasreader_dtm.o lasreader_txt.o lasreadermerged.o lasreaderbuffered.o lasreaderpipeon.o laswriter_las.o laswriter_bin.o laswriter_qfit.o laswriter_wrl.o laswriter_txt.o laswaveform13reader.o laswaveform13writer.o lasutility.o lasinterval.o lasspatial.o lasquadtree.o lasindex.o lasfilter.o lastransform.o fopen_compressed.o
+OBJ_LAS		= lasreader.o laswriter.o lasreader_las.o lasreader_bin.o lasreader_qfit.o lasreader_shp.o lasreader_asc.o lasreader_bil.o lasreader_dtm.o lasreader_txt.o lasreadermerged.o lasreaderbuffered.o lasreaderpipeon.o laswriter_las.o laswriter_bin.o laswriter_qfit.o laswriter_wrl.o laswriter_txt.o laswritercompatible.o laswaveform13reader.o laswaveform13writer.o lasutility.o lasfilter.o lastransform.o fopen_compressed.o
 
 LAZ_DIR = ../../LASzip/src
-OBJ_LAZ = laszip.o lasreadpoint.o lasreaditemcompressed_v1.o lasreaditemcompressed_v2.o laswritepoint.o  laswriteitemcompressed_v1.o laswriteitemcompressed_v2.o integercompressor.o arithmeticdecoder.o arithmeticencoder.o arithmeticmodel.o
+OBJ_LAZ = laszip.o lasreadpoint.o lasreaditemcompressed_v1.o lasreaditemcompressed_v2.o laswritepoint.o  laswriteitemcompressed_v1.o laswriteitemcompressed_v2.o integercompressor.o arithmeticdecoder.o arithmeticencoder.o arithmeticmodel.o lasindex.o lasquadtree.o lasinterval.o 
 
 TARGET_LAS_OBJS = ${patsubst %.o,${OBJDIR}/%.o,${OBJ_LAS}}
 TARGET_LAZ_OBJS = ${patsubst %.o,${LAZ_DIR}/${OBJDIR}/%.o,${OBJ_LAZ}}

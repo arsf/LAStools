@@ -306,6 +306,11 @@ BOOL LASreaderDTM::open(const CHAR* file_name)
     return FALSE;
   }
 
+  if (setvbuf(file, NULL, _IOFBF, 2*LAS_TOOLS_IO_IBUFFER_SIZE) != 0)
+  {
+    fprintf(stderr, "WARNING: setvbuf() failed with buffer size %d\n", 2*LAS_TOOLS_IO_IBUFFER_SIZE);
+  }
+
   // read the 200 byte header
 
   CHAR signature[21];
@@ -468,7 +473,7 @@ BOOL LASreaderDTM::open(const CHAR* file_name)
   {
     unsigned short geokey = 0;
 
-    if (horizontal_datum == 1) // GEO_ELLIPSOID_NAD27
+    if (horizontal_datum == 1) // GEO_DATUM_NAD27
     {
       if ((3 <= coordinate_zone) && (coordinate_zone <= 22))
       {
@@ -479,7 +484,7 @@ BOOL LASreaderDTM::open(const CHAR* file_name)
         fprintf(stderr, "UTM zone %d for NAD27 out-of-range\n", (int)coordinate_zone);
       }
     }
-    else if (horizontal_datum == 2) // GEO_ELLIPSOID_NAD83
+    else if (horizontal_datum == 2) // GEO_DATUM_NAD83
     {
       if ((3 <= coordinate_zone) && (coordinate_zone <= 22))
       {
@@ -494,7 +499,7 @@ BOOL LASreaderDTM::open(const CHAR* file_name)
         fprintf(stderr, "UTM zone %d for NAD83 out-of-range\n", (int)coordinate_zone);
       }
     }
-    else if (horizontal_datum == 3) // GEO_ELLIPSOID_WGS84
+    else if (horizontal_datum == 3) // GEO_DATUM_WGS84
     {
       if (coordinate_zone < 100)
       {
@@ -526,7 +531,7 @@ BOOL LASreaderDTM::open(const CHAR* file_name)
   else if (coordinate_system == 3) // state plane
   {
     unsigned short geokey = 0;
-    if (horizontal_datum == 2) // GEO_ELLIPSOID_NAD83
+    if (horizontal_datum == 2) // GEO_DATUM_NAD83
     {
       switch(coordinate_zone)
       {
@@ -1326,6 +1331,11 @@ BOOL LASreaderDTM::reopen(const CHAR* file_name)
     return FALSE;
   }
 
+  if (setvbuf(file, NULL, _IOFBF, 2*LAS_TOOLS_IO_IBUFFER_SIZE) != 0)
+  {
+    fprintf(stderr, "WARNING: setvbuf() failed with buffer size %d\n", 2*LAS_TOOLS_IO_IBUFFER_SIZE);
+  }
+
   col = 0;
   row = 0;
   p_count = 0;
@@ -1511,20 +1521,8 @@ LASreaderDTMrescale::LASreaderDTMrescale(F64 x_scale_factor, F64 y_scale_factor,
 
 BOOL LASreaderDTMrescale::open(const CHAR* file_name)
 {
+  LASreaderDTM::set_scale_factor(scale_factor);
   if (!LASreaderDTM::open(file_name)) return FALSE;
-  // do we need to change anything
-  if (scale_factor[0] && (header.x_scale_factor != scale_factor[0]))
-  {
-    header.x_scale_factor = scale_factor[0];
-  }
-  if (scale_factor[1] && (header.y_scale_factor != scale_factor[1]))
-  {
-    header.y_scale_factor = scale_factor[1];
-  }
-  if (scale_factor[2] && (header.z_scale_factor != scale_factor[2]))
-  {
-    header.z_scale_factor = scale_factor[2];
-  }
   return TRUE;
 }
 
@@ -1537,20 +1535,8 @@ LASreaderDTMreoffset::LASreaderDTMreoffset(F64 x_offset, F64 y_offset, F64 z_off
 
 BOOL LASreaderDTMreoffset::open(const CHAR* file_name)
 {
+  LASreaderDTM::set_offset(offset);
   if (!LASreaderDTM::open(file_name)) return FALSE;
-  // do we need to change anything
-  if (header.x_offset != offset[0])
-  {
-    header.x_offset = offset[0];
-  }
-  if (header.y_offset != offset[1])
-  {
-    header.y_offset = offset[1];
-  }
-  if (header.z_offset != offset[2])
-  {
-    header.z_offset = offset[2];
-  }
   return TRUE;
 }
 
@@ -1560,31 +1546,8 @@ LASreaderDTMrescalereoffset::LASreaderDTMrescalereoffset(F64 x_scale_factor, F64
 
 BOOL LASreaderDTMrescalereoffset::open(const CHAR* file_name)
 {
+  LASreaderDTM::set_scale_factor(scale_factor);
+  LASreaderDTM::set_offset(offset);
   if (!LASreaderDTM::open(file_name)) return FALSE;
-  // do we need to change anything
-  if (scale_factor[0] && (header.x_scale_factor != scale_factor[0]))
-  {
-    header.x_scale_factor = scale_factor[0];
-  }
-  if (scale_factor[1] && (header.y_scale_factor != scale_factor[1]))
-  {
-    header.y_scale_factor = scale_factor[1];
-  }
-  if (scale_factor[2] && (header.z_scale_factor != scale_factor[2]))
-  {
-    header.z_scale_factor = scale_factor[2];
-  }
-  if (header.x_offset != offset[0])
-  {
-    header.x_offset = offset[0];
-  }
-  if (header.y_offset != offset[1])
-  {
-    header.y_offset = offset[1];
-  }
-  if (header.z_offset != offset[2])
-  {
-    header.z_offset = offset[2];
-  }
   return TRUE;
 }

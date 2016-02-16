@@ -1,3 +1,19 @@
+25 September 2015 -- LASlib: disabling auto-upgrade to LAS 1.4 introduced in 150924. now it just warns.
+24 September 2015 -- LASlib: upgrade to LAS 1.4 when '-merged'ing more points than older LAS allows
+24 September 2015 -- LASlib: consistant zeroing of legacy counters for new LAS 1.4 point types
+28 August 2015 -- lasinfo: option '-repair_counters' corrected for 64 bit counters of LAS 1.4 files
+18 August 2015 -- lasdiff: fixed report for truncated files (fewer or more points) 
+1 August 2015 -- LASlib: moving LASpoint, LASquantizer, and LASattributer to LASzip for "compatibility"
+25 July 2015 -- LAStools: EPSG codes (http://groups.google.com/d/topic/lastools/9fUZaLKPReg/discussion)
+6 June 2015 -- LASlib: added filters '-keep_overlap' and '-drop_overlap' for new LAS 1.4 point types
+16 May 2015 -- LAStools: new projections Albers Equal Area Conic and Earth Centered Earth Fixed
+3 May 2015 -- las2las: improved up-conversion to LAS 1.4 via '-set_version 1.4 -point_type 6'
+3 May 2015 -- LASlib: fixed LASreader_merged to use file source ID of 0 when merging flightlines 
+3 May 2015 -- LASlib: updated LASwriter_las and LASinventory to better handle LAS 1.4 content
+3 April 2015 -- LASzip & LASlib: move spatial indexing from LASlib to LASzip for DLL integration
+31 March 2015 -- LASlib: remove unused LASquadtree inheritance of abstract class LASspatial 
+30 March 2015 -- las2txt: correct ASCII output for extended attributes of new LAS 1.4 point types
+30 March 2015 -- LASlib: LASwriterCompatibleDown/LASwriterCompatibleUp for LAS 1.4 compatibility
 31 January 2015 -- LASlib: new transforms for extended attributes of LAS 1.4 point types 6 - 10
 18 December 2014 -- LASlib: different scale_factors/offsets are now possible with '-buffered 25'
 18 December 2014 -- laszip: use '-check' to find truncations and/or bit-errors in LAZ files

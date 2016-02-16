@@ -42,9 +42,26 @@ http://rapidlasso.com/2013/09/29/how-to-install-lastools-toolbox-in-qgis/
 If you have problems make sure you read *ALL* the comments to this
 blog article or add some new comments detailing your troubles.
 
+For our Spanish-speaking LiDAR friends ... check these two blogs:
+
+http://digimapas.blogspot.com.es/2015/04/lidar-en-qgis-lastools.html
+http://mappinggis.com/2015/04/como-configurar-lastools-en-qgis/
+
 ================================================================
 
-For QGIS 2.6 the results have been mixed so far. Follow what is
-happening in this discussion:
+For QGIS 2.6 the latest toolbox is already included. But maybe
+have a look what was said in this discussion:
 
 http://groups.google.com/d/topic/lastools/ktyrnfDjrQ4/discussion
+
+================================================================
+
+For QGIS 2.8 all is great. For small bug fixes copy and replace
+the scripts of the "QGIS_2_8_toolbox_bug_fixes.zip" archive into
+whatever path corresponds in your installation to this one:
+
+C:\Program Files\QGIS Wien\apps\qgis\python\plugins\processing\algs\lidar\lastools
+
+================================================================
+
+For QGIS 2.10 all is great.

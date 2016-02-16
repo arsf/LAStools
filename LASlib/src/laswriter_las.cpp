@@ -154,10 +154,11 @@ BOOL LASwriterLAS::open(ByteStreamOut* stream, const LASheader* header, U32 comp
 
   // check if the requested point type is supported
 
-  BOOL point_is_standard = TRUE;
+  LASpoint point;
   U8 point_data_format;
   U16 point_data_record_length;
-  LASpoint point;
+  BOOL point_is_standard = TRUE;
+
   if (header->laszip)
   {
     if (!point.init(&quantizer, header->laszip->num_items, header->laszip->items, header)) return FALSE;
@@ -170,7 +171,7 @@ BOOL LASwriterLAS::open(ByteStreamOut* stream, const LASheader* header, U32 comp
     point_data_record_length = header->point_data_record_length;
   }
 
-  // do we need a laszip VLR (because we compress or use non-standard points?) 
+  // do we need a LASzip VLR (because we compress or use non-standard points?) 
 
   LASzip* laszip = 0;
   U32 laszip_vlr_data_size = 0;
@@ -193,7 +194,7 @@ BOOL LASwriterLAS::open(ByteStreamOut* stream, const LASheader* header, U32 comp
   {
     if (!writer->setup(laszip->num_items, laszip->items, laszip))
     {
-      fprintf(stderr,"ERROR: point type not supported\n");
+      fprintf(stderr,"ERROR: point type %d of size %d not supported (with LASzip)\n", header->point_data_format, header->point_data_record_length);
       return FALSE;
     }
   }
@@ -201,7 +202,7 @@ BOOL LASwriterLAS::open(ByteStreamOut* stream, const LASheader* header, U32 comp
   {
     if (!writer->setup(point.num_items, point.items))
     {
-      fprintf(stderr,"ERROR: point type not supported\n");
+      fprintf(stderr,"ERROR: point type %d of size %d not supported\n", header->point_data_format, header->point_data_record_length);
       return FALSE;
     }
   }
@@ -248,40 +249,28 @@ BOOL LASwriterLAS::open(ByteStreamOut* stream, const LASheader* header, U32 comp
     return FALSE;
   }
   // check version major
+  U8 version_major = header->version_major;
   if (header->version_major != 1)
   {
     fprintf(stderr,"WARNING: header->version_major is %d. writing 1 instead.\n", header->version_major);
-    if (!stream->putByte(1))
-    {
-      fprintf(stderr,"ERROR: writing header->version_major\n");
-      return FALSE;
-    }
+    version_major = 1;
   }
-  else
+  if (!stream->putByte(header->version_major))
   {
-    if (!stream->putByte(header->version_major))
-    {
-      fprintf(stderr,"ERROR: writing header->version_major\n");
-      return FALSE;
-    }
+    fprintf(stderr,"ERROR: writing header->version_major\n");
+    return FALSE;
   }
   // check version minor
-  if (header->version_minor > 4)
+  U8 version_minor = header->version_minor;
+  if (version_minor > 4)
   {
-    fprintf(stderr,"WARNING: header->version_minor is %d. writing 4 instead.\n", header->version_minor);
-    if (!stream->putByte(4))
-    {
-      fprintf(stderr,"ERROR: writing header->version_minor\n");
-      return FALSE;
-    }
+    fprintf(stderr,"WARNING: header->version_minor is %d. writing 4 instead.\n", version_minor);
+    version_minor = 4;
   }
-  else
+  if (!stream->putByte(version_minor))
   {
-    if (!stream->putByte(header->version_minor))
-    {
-      fprintf(stderr,"ERROR: writing header->version_minor\n");
-      return FALSE;
-    }
+    fprintf(stderr,"ERROR: writing header->version_minor\n");
+    return FALSE;
   }
   if (!stream->putBytes((U8*)header->system_identifier, 32))
   {
@@ -412,7 +401,7 @@ BOOL LASwriterLAS::open(ByteStreamOut* stream, const LASheader* header, U32 comp
   }
 
   // special handling for LAS 1.3 or higher.
-  if (header->version_minor >= 3)
+  if (version_minor >= 3)
   {
     U64 start_of_waveform_data_packet_record = header->start_of_waveform_data_packet_record;
     if (start_of_waveform_data_packet_record != 0)
@@ -432,9 +421,17 @@ BOOL LASwriterLAS::open(ByteStreamOut* stream, const LASheader* header, U32 comp
   }
 
   // special handling for LAS 1.4 or higher.
-  if (header->version_minor >= 4)
+  if (version_minor >= 4)
   {
     writing_las_1_4 = TRUE;
+    if (header->point_data_format >= 6)
+    {
+      writing_new_point_type = TRUE;
+    }
+    else
+    {
+      writing_new_point_type = FALSE;
+    }
 
     U64 start_of_first_extended_variable_length_record = header->start_of_first_extended_variable_length_record;
     if (start_of_first_extended_variable_length_record != 0)
@@ -462,23 +459,24 @@ BOOL LASwriterLAS::open(ByteStreamOut* stream, const LASheader* header, U32 comp
       fprintf(stderr,"ERROR: writing header->number_of_extended_variable_length_records\n");
       return FALSE;
     }
-    U64 value;
+    U64 extended_number_of_point_records;
     if (header->number_of_point_records)
-      value = header->number_of_point_records;
+      extended_number_of_point_records = header->number_of_point_records;
     else
-      value = header->extended_number_of_point_records;
-    if (!stream->put64bitsLE((U8*)&value))
+      extended_number_of_point_records = header->extended_number_of_point_records;
+    if (!stream->put64bitsLE((U8*)&extended_number_of_point_records))
     {
       fprintf(stderr,"ERROR: writing header->extended_number_of_point_records\n");
       return FALSE;
     }
+    U64 extended_number_of_points_by_return;
     for (i = 0; i < 15; i++)
     {
       if ((i < 5) && header->number_of_points_by_return[i])
-        value = header->number_of_points_by_return[i];
+        extended_number_of_points_by_return = header->number_of_points_by_return[i];
       else
-        value = header->extended_number_of_points_by_return[i];
-      if (!stream->put64bitsLE((U8*)&value))
+        extended_number_of_points_by_return = header->extended_number_of_points_by_return[i];
+      if (!stream->put64bitsLE((U8*)&extended_number_of_points_by_return))
       {
         fprintf(stderr,"ERROR: writing header->extended_number_of_points_by_return[%d]\n", i);
         return FALSE;
@@ -488,6 +486,7 @@ BOOL LASwriterLAS::open(ByteStreamOut* stream, const LASheader* header, U32 comp
   else
   {
     writing_las_1_4 = FALSE;
+    writing_new_point_type = FALSE;
   }
 
   // write any number of user-defined bytes that might have been added into the header
@@ -886,7 +885,7 @@ BOOL LASwriterLAS::open(ByteStreamOut* stream, const LASheader* header, U32 comp
 
   if (!writer->init(stream)) return FALSE;
 
-  npoints = header->number_of_point_records;
+  npoints = (header->number_of_point_records ? header->number_of_point_records : header->extended_number_of_point_records);
   p_count = 0;
 
   return TRUE;
@@ -906,6 +905,11 @@ BOOL LASwriterLAS::chunk()
 BOOL LASwriterLAS::update_header(const LASheader* header, BOOL use_inventory, BOOL update_extra_bytes)
 {
   I32 i;
+  if (header == 0)
+  {
+    fprintf(stderr,"ERROR: header pointer is zero\n");
+    return FALSE;
+  }
   if (stream == 0)
   {
     fprintf(stderr,"ERROR: stream pointer is zero\n");
@@ -918,16 +922,56 @@ BOOL LASwriterLAS::update_header(const LASheader* header, BOOL use_inventory, BO
   }
   if (use_inventory)
   {
+    U32 number;
     stream->seek(header_start_position+107);
-    if (!stream->put32bitsLE((U8*)&(inventory.number_of_point_records)))
+    if (header->point_data_format >= 6)
+    {
+      number = 0; // legacy counters are zero for new point types
+    }
+    else if (inventory.extended_number_of_point_records > U32_MAX)
+    {
+      if (header->version_minor >= 4)
+      {
+        number = 0;
+      }
+      else
+      {
+        fprintf(stderr,"WARNING: too many points in LAS %d.%d file. limit is %u.\n", header->version_major, header->version_minor, U32_MAX);
+        number = U32_MAX;
+      }
+    }
+    else
+    {
+      number = (U32)inventory.extended_number_of_point_records;
+    }
+    if (!stream->put32bitsLE((U8*)&number))
     {
       fprintf(stderr,"ERROR: updating inventory.number_of_point_records\n");
       return FALSE;
     }
-    npoints = inventory.number_of_point_records;
+    npoints = inventory.extended_number_of_point_records;
     for (i = 0; i < 5; i++)
     {
-      if (!stream->put32bitsLE((U8*)&(inventory.number_of_points_by_return[i+1])))
+      if (header->point_data_format >= 6)
+      {
+        number = 0; // legacy counters are zero for new point types
+      }
+      else if (inventory.extended_number_of_points_by_return[i+1] > U32_MAX)
+      {
+        if (header->version_minor >= 4)
+        {
+          number = 0;
+        }
+        else
+        {
+          number = U32_MAX;
+        }
+      }
+      else
+      {
+        number = (U32)inventory.extended_number_of_points_by_return[i+1];
+      }
+      if (!stream->put32bitsLE((U8*)&number))
       {
         fprintf(stderr,"ERROR: updating inventory.number_of_points_by_return[%d]\n", i);
         return FALSE;
@@ -971,16 +1015,38 @@ BOOL LASwriterLAS::update_header(const LASheader* header, BOOL use_inventory, BO
       fprintf(stderr,"ERROR: updating inventory.min_Z\n");
       return FALSE;
     }
+    // special handling for LAS 1.4 or higher.
+    if (header->version_minor >= 4)
+    {
+      stream->seek(header_start_position+247);
+      if (!stream->put64bitsLE((U8*)&(inventory.extended_number_of_point_records)))
+      {
+        fprintf(stderr,"ERROR: updating header->extended_number_of_point_records\n");
+        return FALSE;
+      }
+      for (i = 0; i < 15; i++)
+      {
+        if (!stream->put64bitsLE((U8*)&(inventory.extended_number_of_points_by_return[i+1])))
+        {
+          fprintf(stderr,"ERROR: updating header->extended_number_of_points_by_return[%d]\n", i);
+          return FALSE;
+        }
+      }
+    }
   }
   else
   {
-    if (header == 0)
-    {
-      fprintf(stderr,"ERROR: header pointer is zero\n");
-      return FALSE;
-    }
+    U32 number;
     stream->seek(header_start_position+107);
-    if (!stream->put32bitsLE((U8*)&(header->number_of_point_records)))
+    if (header->point_data_format >= 6)
+    {
+      number = 0; // legacy counters are zero for new point types
+    }
+    else
+    {
+      number = header->number_of_point_records;
+    }
+    if (!stream->put32bitsLE((U8*)&number))
     {
       fprintf(stderr,"ERROR: updating header->number_of_point_records\n");
       return FALSE;
@@ -988,7 +1054,15 @@ BOOL LASwriterLAS::update_header(const LASheader* header, BOOL use_inventory, BO
     npoints = header->number_of_point_records;
     for (i = 0; i < 5; i++)
     {
-      if (!stream->put32bitsLE((U8*)&(header->number_of_points_by_return[i])))
+      if (header->point_data_format >= 6)
+      {
+        number = 0; // legacy counters are zero for new point types
+      }
+      else
+      {
+        number = header->number_of_points_by_return[i];
+      }
+      if (!stream->put32bitsLE((U8*)&number))
       {
         fprintf(stderr,"ERROR: updating header->number_of_points_by_return[%d]\n", i);
         return FALSE;
@@ -1166,15 +1240,32 @@ I64 LASwriterLAS::close(BOOL update_header)
       }
       else
       {
+        U32 number;
+        if (writing_new_point_type)
+        {
+          number = 0;
+        }
+        else if (p_count > U32_MAX)
+        {
+          if (writing_las_1_4)
+          {
+            number = 0;
+          }
+          else
+          {
+            number = U32_MAX;
+          }
+        }
+        else
+        {
+          number = (U32)p_count;
+        }
 	      stream->seek(header_start_position+107);
-        U32 value = (U32)p_count;
-        if (writing_las_1_4 && (p_count > U32_MAX)) value = 0;
-	      stream->put32bitsLE((U8*)&value);
+	      stream->put32bitsLE((U8*)&number);
         if (writing_las_1_4)
         {
-          U64 value = (U64)p_count;
   	      stream->seek(header_start_position+235+12);
-  	      stream->put64bitsLE((U8*)&value);
+  	      stream->put64bitsLE((U8*)&p_count);
         }
         stream->seekEnd();
       }
@@ -1202,6 +1293,7 @@ LASwriterLAS::LASwriterLAS()
   stream = 0;
   writer = 0;
   writing_las_1_4 = FALSE;
+  writing_new_point_type = FALSE;
 }
 
 LASwriterLAS::~LASwriterLAS()

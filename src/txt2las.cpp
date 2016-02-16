@@ -20,7 +20,7 @@
   
   COPYRIGHT:
   
-    (c) 2007-12, martin isenburg, rapidlasso - fast tools to catch reality
+    (c) 2007-2016, martin isenburg, rapidlasso - fast tools to catch reality
 
     This is free software; you can redistribute and/or modify it under the
     terms of the GNU Lesser General Licence as published by the Free Software
@@ -31,7 +31,9 @@
   
   CHANGE HISTORY:
   
-    4 December 2011 -- added option to set classification with '-set_class 2'
+    17 January 2016 -- pre-scaling and pre-offsetting of "extra bytes" attributes
+     1 January 2016 -- option '-set_ogc_wkt' to store CRS as OGC WKT string
+     4 December 2011 -- added option to set classification with '-set_class 2'
     22 April 2011 -- added command-line flags to specify the projection VLRs
     20 March 2011 -- added capability to read *.zip, *.rar, and *.7z directly
     22 February 2011 -- added option to scale the intensity and scan_angle
@@ -153,6 +155,7 @@ int main(int argc, char *argv[])
   int set_classification = -1;
   char* set_system_identifier = 0;
   char* set_generating_software = 0;
+  bool set_ogc_wkt = false;
   double start_time = 0.0;
 
   LASreadOpener lasreadopener;
@@ -165,7 +168,7 @@ int main(int argc, char *argv[])
     return txt2las_gui(argc, argv, 0);
 #else
     char file_name[256];
-    fprintf(stderr,"txt2las.exe is better run in the command line\n");
+    fprintf(stderr,"%s is better run in the command line\n", argv[0]);
     fprintf(stderr,"enter input file: "); fgets(file_name, 256, stdin);
     file_name[strlen(file_name)-1] = '\0';
     lasreadopener.set_file_name(file_name);
@@ -187,7 +190,7 @@ int main(int argc, char *argv[])
           fprintf(stderr,"ERROR: '%s' needs 1 argument: factor\n", argv[i]);
           usage(true);
         }
-        lasreadopener.set_scale_intensity(atof(argv[i+1]));
+        lasreadopener.set_scale_intensity((F32)atof(argv[i+1]));
         *argv[i]='\0'; *argv[i+1]='\0'; i+=1;
       }
       else if (strcmp(argv[i],"-translate_intensity") == 0)
@@ -197,7 +200,7 @@ int main(int argc, char *argv[])
           fprintf(stderr,"ERROR: '%s' needs 1 argument: offset\n", argv[i]);
           usage(true);
         }
-        lasreadopener.set_translate_intensity(atof(argv[i+1]));
+        lasreadopener.set_translate_intensity((F32)atof(argv[i+1]));
         *argv[i]='\0'; *argv[i+1]='\0'; i+=1;
       }
       else if (strcmp(argv[i],"-translate_then_scale_intensity") == 0)
@@ -207,8 +210,8 @@ int main(int argc, char *argv[])
           fprintf(stderr,"ERROR: '%s' needs 2 arguments: offset factor\n", argv[i]);
           usage(true);
         }
-        lasreadopener.set_translate_intensity(atof(argv[i+1]));
-        lasreadopener.set_scale_intensity(atof(argv[i+2]));
+        lasreadopener.set_translate_intensity((F32)atof(argv[i+1]));
+        lasreadopener.set_scale_intensity((F32)atof(argv[i+2]));
         *argv[i]='\0'; *argv[i+1]='\0'; *argv[i+2]='\0'; i+=2;
       }
       else if (strcmp(argv[i],"-scale_scan_angle") == 0)
@@ -218,7 +221,7 @@ int main(int argc, char *argv[])
           fprintf(stderr,"ERROR: '%s' needs 1 argument: factor\n", argv[i]);
           usage(true);
         }
-        lasreadopener.set_scale_scan_angle(atof(argv[i+1]));
+        lasreadopener.set_scale_scan_angle((F32)atof(argv[i+1]));
         *argv[i]='\0'; *argv[i+1]='\0'; i+=1;
       }
     }
@@ -328,7 +331,7 @@ int main(int argc, char *argv[])
       sscanf(argv[i], "%lf", &(offset[2]));
       lasreadopener.set_offset(offset);
     }
-    else if (strcmp(argv[i],"-add_extra") == 0)
+    else if (strcmp(argv[i],"-add_extra") == 0 || strcmp(argv[i],"-add_attribute") == 0)
     {
       if ((i+3) >= argc)
       {
@@ -337,10 +340,26 @@ int main(int argc, char *argv[])
       }
       if (((i+4) < argc) && (atof(argv[i+4]) != 0.0))
       {
-        if (((i+5) < argc) && (atof(argv[i+5]) != 0.0))
+        if (((i+5) < argc) && ((atof(argv[i+5]) != 0.0) || (strcmp(argv[i+5], "0") == 0) || (strcmp(argv[i+5], "0.0") == 0)))
         {
-          lasreadopener.add_attribute(atoi(argv[i+1]), argv[i+2], argv[i+3], atof(argv[i+4]), atof(argv[i+5]));
-          i+=5;
+          if (((i+6) < argc) && (atof(argv[i+6]) != 0.0))
+          {
+            if (((i+7) < argc) && ((atof(argv[i+7]) != 0.0) || (strcmp(argv[i+7], "0") == 0) || (strcmp(argv[i+7], "0.0") == 0)))
+            {
+              lasreadopener.add_attribute(atoi(argv[i+1]), argv[i+2], argv[i+3], atof(argv[i+4]), atof(argv[i+5]), atof(argv[i+6]), atof(argv[i+7]));
+              i+=7;
+            }
+            else
+            { 
+              lasreadopener.add_attribute(atoi(argv[i+1]), argv[i+2], argv[i+3], atof(argv[i+4]), atof(argv[i+5]), atof(argv[i+6]));
+              i+=6;
+            }
+          }
+          else
+          { 
+            lasreadopener.add_attribute(atoi(argv[i+1]), argv[i+2], argv[i+3], atof(argv[i+4]), atof(argv[i+5]));
+            i+=5;
+          }
         }
         else
         {
@@ -395,6 +414,10 @@ int main(int argc, char *argv[])
       }
       i++;
       set_generating_software = argv[i];
+    }
+    else if (strcmp(argv[i],"-set_ogc_wkt") == 0)
+    {
+      set_ogc_wkt = true;
     }
     else if (strcmp(argv[i],"-set_version") == 0)
     {
@@ -622,6 +645,25 @@ int main(int argc, char *argv[])
         lasreader->header.del_geo_double_params();
       }
       lasreader->header.del_geo_ascii_params();
+
+      if (set_ogc_wkt) // maybe also set the OCG WKT 
+      {
+        I32 len = 0;
+        CHAR* ogc_wkt = 0;
+        if (geoprojectionconverter.get_ogc_wkt_from_projection(len, &ogc_wkt, !geoprojectionconverter.has_projection(false)))
+        {
+          lasreader->header.set_geo_wkt_ogc_cs(len, ogc_wkt);
+          free(ogc_wkt);
+          if ((lasreader->header.version_minor >= 4) && (lasreader->header.point_data_format >= 6))
+          {
+            lasreader->header.set_global_encoding_bit(LAS_TOOLS_GLOBAL_ENCODING_BIT_OGC_WKT_CRS);
+          }
+        }
+        else
+        {
+          fprintf(stderr, "WARNING: cannot produce OCG WKT. ignoring '-set_ogc_wkt' for '%s'\n", lasreadopener.get_file_name());
+        }
+      }
     }
 
     // open the output

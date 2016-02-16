@@ -37,18 +37,45 @@
 LASinventory::LASinventory()
 {
   U32 i;
-  number_of_point_records = 0;
-  for (i = 0; i < 8; i++) number_of_points_by_return[i] = 0;
+  extended_number_of_point_records = 0;
+  for (i = 0; i < 16; i++) extended_number_of_points_by_return[i] = 0;
   max_X = min_X = 0;
   max_Y = min_Y = 0;
   max_Z = min_Z = 0;
   first = TRUE;
 }
 
+BOOL LASinventory::init(const LASheader* header)
+{
+  if (header)
+  {
+    U32 i;
+    extended_number_of_point_records = (header->number_of_point_records ? header->number_of_point_records : header->extended_number_of_point_records);
+    for (i = 0; i < 5; i++) extended_number_of_points_by_return[i] = (header->number_of_points_by_return[i] ? header->number_of_points_by_return[i] : header->extended_number_of_points_by_return[i]);
+    for (i = 5; i < 16; i++) extended_number_of_points_by_return[i] = header->extended_number_of_points_by_return[i];
+    max_X = header->get_X(header->max_x);
+    min_X = header->get_X(header->min_x);
+    max_Y = header->get_Y(header->max_y);
+    min_Y = header->get_Y(header->min_y);
+    max_Z = header->get_Z(header->max_z);
+    min_Z = header->get_Z(header->min_z);
+    first = FALSE;
+    return TRUE;
+  }
+  return FALSE;
+}
+
 BOOL LASinventory::add(const LASpoint* point)
 {
-  number_of_point_records++;
-  number_of_points_by_return[point->return_number]++;
+  extended_number_of_point_records++;
+  if (point->extended_point_type)
+  {
+    extended_number_of_points_by_return[point->extended_return_number]++;
+  }
+  else
+  {
+    extended_number_of_points_by_return[point->return_number]++;
+  }
   if (first)
   {
     min_X = max_X = point->get_X();
@@ -68,6 +95,63 @@ BOOL LASinventory::add(const LASpoint* point)
   return TRUE;
 }
 
+BOOL LASinventory::update_header(LASheader* header) const
+{
+  if (header)
+  {
+    int i;
+    if (extended_number_of_point_records > U32_MAX)
+    {
+      if (header->version_minor >= 4)
+      {
+        header->number_of_point_records = 0;
+      }
+      else
+      {
+        return FALSE;
+      }
+    }
+    else
+    {
+      header->number_of_point_records = (U32)extended_number_of_point_records;
+    }
+    for (i = 0; i < 5; i++)
+    {
+      if (extended_number_of_points_by_return[i+1] > U32_MAX)
+      {
+        if (header->version_minor >= 4)
+        {
+          header->number_of_points_by_return[i] = 0;
+        }
+        else
+        {
+          return FALSE;
+        }
+      }
+      else
+      {
+        header->number_of_points_by_return[i] = (U32)extended_number_of_points_by_return[i+1];
+      }
+    }
+    header->max_x = header->get_x(max_X);
+    header->min_x = header->get_x(min_X);
+    header->max_y = header->get_y(max_Y);
+    header->min_y = header->get_y(min_Y);
+    header->max_z = header->get_z(max_Z);
+    header->min_z = header->get_z(min_Z);
+    header->extended_number_of_point_records = extended_number_of_point_records;
+    for (i = 0; i < 15; i++)
+    {
+      header->extended_number_of_points_by_return[i] = extended_number_of_points_by_return[i+1];
+    }
+    return TRUE;
+  }
+  else
+  {
+    return FALSE;
+  }
+}
+
 LASsummary::LASsummary()
 {
   U32 i;
@@ -81,6 +165,7 @@ LASsummary::LASsummary()
     xyz_fluff_10[i] = 0;
     xyz_fluff_100[i] = 0;
     xyz_fluff_1000[i] = 0;
+    xyz_fluff_10000[i] = 0;
   }
   classification_synthetic = 0;
   classification_keypoint = 0;
@@ -92,17 +177,22 @@ LASsummary::LASsummary()
 BOOL LASsummary::add(const LASpoint* point)
 {
   number_of_point_records++;
-  number_of_points_by_return[point->get_return_number()]++;
-  number_of_returns[point->get_number_of_returns()]++;
+  if (point->extended_point_type)
+  {
+    number_of_points_by_return[point->get_extended_return_number()]++;
+    number_of_returns[point->get_extended_number_of_returns()]++;
+    extended_classification[point->get_extended_classification()]++;
+    if (point->get_extended_overlap_flag()) classification_extended_overlap++;
+  }
+  else
+  {
+    number_of_points_by_return[point->get_return_number()]++;
+    number_of_returns[point->get_number_of_returns()]++;
+  }
   classification[point->get_classification()]++;
   if (point->get_synthetic_flag()) classification_synthetic++;
   if (point->get_keypoint_flag()) classification_keypoint++;
   if (point->get_withheld_flag()) classification_withheld++;
-  if (point->extended_point_type)
-  {
-    extended_classification[point->get_extended_classification()]++;
-    if (point->get_extended_overlap_flag()) classification_extended_overlap++;
-  }
   if (first)
   {
     min = *point;
@@ -194,6 +284,10 @@ BOOL LASsummary::add(const LASpoint* point)
       if ((point->get_X()%1000) == 0)
       {
         xyz_fluff_1000[0]++;
+        if ((point->get_X()%10000) == 0)
+        {
+          xyz_fluff_10000[0]++;
+        }
       }
     }
   }
@@ -206,6 +300,10 @@ BOOL LASsummary::add(const LASpoint* point)
       if ((point->get_Y()%1000) == 0)
       {
         xyz_fluff_1000[1]++;
+        if ((point->get_Y()%10000) == 0)
+        {
+          xyz_fluff_10000[1]++;
+        }
       }
     }
   }
@@ -218,6 +316,10 @@ BOOL LASsummary::add(const LASpoint* point)
       if ((point->get_Z()%1000) == 0)
       {
         xyz_fluff_1000[2]++;
+        if ((point->get_Z()%10000) == 0)
+        {
+          xyz_fluff_10000[2]++;
+        }
       }
     }
   }
@@ -229,12 +331,14 @@ F32 LASbin::get_step() const
   return step;
 }
 
-LASbin::LASbin(F32 step)
+LASbin::LASbin(F32 step, F32 clamp_min, F32 clamp_max)
 {
   total = 0;
   count = 0;
   this->step = step;
   this->one_over_step = 1.0f/step;
+  this->clamp_min = clamp_min;
+  this->clamp_max = clamp_max;
   first = TRUE;
   size_pos = 0;
   size_neg = 0;
@@ -254,6 +358,14 @@ LASbin::~LASbin()
 
 void LASbin::add(I32 item)
 {
+  if (item > clamp_max)
+  {
+    item = (I32)clamp_max;
+  }
+  else if (item < clamp_min)
+  {
+    item = (I32)clamp_min;
+  }
   total += item;
   count++;
   I32 bin = I32_FLOOR(one_over_step*item);
@@ -262,6 +374,14 @@ void LASbin::add(I32 item)
 
 void LASbin::add(F64 item)
 {
+  if (item > clamp_max)
+  {
+    item = clamp_max;
+  }
+  else if (item < clamp_min)
+  {
+    item = clamp_min;
+  }
   total += item;
   count++;
   I32 bin = I32_FLOOR(one_over_step*item);
@@ -270,6 +390,14 @@ void LASbin::add(F64 item)
 
 void LASbin::add(I64 item)
 {
+  if (item > clamp_max)
+  {
+    item = (I64)clamp_max;
+  }
+  else if (item < clamp_min)
+  {
+    item = (I64)clamp_min;
+  }
   total += item;
   count++;
   I32 bin = I32_FLOOR(one_over_step*item);
@@ -369,6 +497,7 @@ void LASbin::add(I32 item, I32 value)
       {
         size_pos = 1024;
         bins_pos = (U32*)malloc(sizeof(U32)*size_pos);
+        values_pos = (F64*)malloc(sizeof(F64)*size_pos);
         if (bins_pos == 0)
         {
           fprintf(stderr, "ERROR: allocating %u pos bins\012", size_pos);
@@ -379,7 +508,108 @@ void LASbin::add(I32 item, I32 value)
           fprintf(stderr, "ERROR: allocating %u pos values\012", size_pos);
           exit(1);
         }
+        for (i = 0; i < size_pos; i++) { bins_pos[i] = 0; values_pos[i] = 0; }
+      }
+      else
+      {
+        I32 new_size = bin + 1024;
+        bins_pos = (U32*)realloc(bins_pos, sizeof(U32)*new_size);
+        values_pos = (F64*)realloc(values_pos, sizeof(F64)*new_size);
+        if (bins_pos == 0)
+        {
+          fprintf(stderr, "ERROR: reallocating %u pos bins\012", new_size);
+          exit(1);
+        }
+        if (values_pos == 0)
+        {
+          fprintf(stderr, "ERROR: reallocating %u pos values\012", new_size);
+          exit(1);
+        }
+        for (i = size_pos; i < new_size; i++) { bins_pos[i] = 0; values_pos[i] = 0; }
+        size_pos = new_size;
+      }
+    }
+    bins_pos[bin]++;
+    values_pos[bin] += value;
+  }
+  else
+  {
+    bin = -(bin+1);
+    if (bin >= size_neg)
+    {
+      I32 i;
+      if (size_neg == 0)
+      {
+        size_neg = 1024;
+        bins_neg = (U32*)malloc(sizeof(U32)*size_neg);
+        values_neg = (F64*)malloc(sizeof(F64)*size_neg);
+        if (bins_neg == 0)
+        {
+          fprintf(stderr, "ERROR: allocating %u neg bins\012", size_neg);
+          exit(1);
+        }
+        if (values_neg == 0)
+        {
+          fprintf(stderr, "ERROR: allocating %u neg values\012", size_neg);
+          exit(1);
+        }
+        for (i = 0; i < size_neg; i++) { bins_neg[i] = 0; values_neg[i] = 0; }
+      }
+      else
+      {
+        I32 new_size = bin + 1024;
+        bins_neg = (U32*)realloc(bins_neg, sizeof(U32)*new_size);
+        values_neg = (F64*)realloc(values_neg, sizeof(F64)*new_size);
+        if (bins_neg == 0)
+        {
+          fprintf(stderr, "ERROR: reallocating %u neg bins\012", new_size);
+          exit(1);
+        }
+        if (values_neg == 0)
+        {
+          fprintf(stderr, "ERROR: reallocating %u neg values\012", new_size);
+          exit(1);
+        }
+        for (i = size_neg; i < new_size; i++) { bins_neg[i] = 0; values_neg[i] = 0; }
+        size_neg = new_size;
+      }
+    }
+    bins_neg[bin]++;
+    values_neg[bin] += value;
+  }
+}
+
+void LASbin::add(F64 item, F64 value)
+{
+  total += item;
+  count++;
+  I32 bin = I32_FLOOR(one_over_step*item);
+  if (first)
+  {
+    anker = bin;
+    first = FALSE;
+  }
+  bin = bin - anker;
+  if (bin >= 0)
+  {
+    if (bin >= size_pos)
+    {
+      I32 i;
+      if (size_pos == 0)
+      {
+        size_pos = 1024;
+        bins_pos = (U32*)malloc(sizeof(U32)*size_pos);
         values_pos = (F64*)malloc(sizeof(F64)*size_pos);
+        if (bins_pos == 0)
+        {
+          fprintf(stderr, "ERROR: allocating %u pos bins\012", size_pos);
+          exit(1);
+        }
+        if (values_pos == 0)
+        {
+          fprintf(stderr, "ERROR: allocating %u pos values\012", size_pos);
+          exit(1);
+        }
         for (i = 0; i < size_pos; i++) { bins_pos[i] = 0; values_pos[i] = 0; }
       }
       else
@@ -516,10 +746,17 @@ void LASbin::report(FILE* file, const CHAR* name, const CHAR* name_avg) const
   }
   if (count)
   {
+#ifdef _WIN32
     if (name)
-      fprintf(file, "  average %s %g\012", name, total/count);
+      fprintf(file, "  average %s %g for %I64d element(s)\012", name, total/count, count);
     else
-      fprintf(file, "  average %g\012", total/count);
+      fprintf(file, "  average %g for %I64d element(s)\012", total/count, count);
+#else
+    if (name)
+      fprintf(file, "  average %s %g for %lld element(s)\012", name, total/count, count);
+    else
+      fprintf(file, "  average %g for %lld element(s)\012", total/count, count);
+#endif
   }
 }
 

@@ -54,6 +54,11 @@ BOOL LASreaderTXT::open(const char* file_name, const char* parse_string, I32 ski
     return FALSE;
   }
 
+  if (setvbuf(file, NULL, _IOFBF, 10*LAS_TOOLS_IO_IBUFFER_SIZE) != 0)
+  {
+    fprintf(stderr, "WARNING: setvbuf() failed with buffer size %d\n", 10*LAS_TOOLS_IO_IBUFFER_SIZE);
+  }
+
   return open(file, file_name, parse_string, skip_lines, populate_header);
 }
 
@@ -135,12 +140,12 @@ BOOL LASreaderTXT::open(FILE* file, const char* file_name, const char* parse_str
   }
   else
   {
-    header.file_creation_day = 333;
-    header.file_creation_year = 2014;
+    header.file_creation_day = 1;
+    header.file_creation_year = 2016;
   }
 #else
-  header.file_creation_day = 333;
-  header.file_creation_year = 2014;
+  header.file_creation_day = 1;
+  header.file_creation_year = 2016;
 #endif
   if (parse_string)
   {
@@ -348,6 +353,11 @@ BOOL LASreaderTXT::open(FILE* file, const char* file_name, const char* parse_str
     {
       fprintf(stderr, "ERROR: could not open '%s' for second pass\n", file_name);
       return FALSE;
+    }
+
+    if (setvbuf(file, NULL, _IOFBF, 10*LAS_TOOLS_IO_IBUFFER_SIZE) != 0)
+    {
+      fprintf(stderr, "WARNING: setvbuf() failed with buffer size %d\n", 10*LAS_TOOLS_IO_IBUFFER_SIZE);
     }
   }
 
@@ -614,8 +624,8 @@ BOOL LASreaderTXT::open(FILE* file, const char* file_name, const char* parse_str
   if (i != 1)
   {
     fprintf(stderr, "ERROR: could not parse any lines with '%s'\n", this->parse_string);
-    fclose(file);
-    file = 0;
+    fclose(this->file);
+    this->file = 0;
     free(this->parse_string);
     this->parse_string = 0;
     return FALSE;
@@ -716,7 +726,7 @@ void LASreaderTXT::set_offset(const F64* offset)
   }
 }
 
-void LASreaderTXT::add_attribute(I32 data_type, const char* name, const char* description, F64 scale, F64 offset)
+void LASreaderTXT::add_attribute(I32 data_type, const char* name, const char* description, F64 scale, F64 offset, F64 pre_scale, F64 pre_offset)
 {
   attributes_data_types[number_attributes] = data_type;
   if (name)
@@ -739,6 +749,8 @@ void LASreaderTXT::add_attribute(I32 data_type, const char* name, const char* de
   }
   attribute_scales[number_attributes] = scale;
   attribute_offsets[number_attributes] = offset;
+  attribute_pre_scales[number_attributes] = pre_scale;
+  attribute_pre_offsets[number_attributes] = pre_offset;
   number_attributes++;
 }
 
@@ -906,6 +918,11 @@ BOOL LASreaderTXT::reopen(const char* file_name)
     return FALSE;
   }
 
+  if (setvbuf(file, NULL, _IOFBF, 10*LAS_TOOLS_IO_IBUFFER_SIZE) != 0)
+  {
+    fprintf(stderr, "WARNING: setvbuf() failed with buffer size %d\n", 10*LAS_TOOLS_IO_IBUFFER_SIZE);
+  }
+
   // skip lines if we have to
 
   for (i = 0; i < skip_lines; i++) fgets(line, 512, file);
@@ -997,11 +1014,19 @@ BOOL LASreaderTXT::parse_attribute(const char* l, I32 index)
   {
     return FALSE;
   }
+  F64 temp_d;
+  if (sscanf(l, "%lf", &temp_d) != 1) return FALSE;
+  if (attribute_pre_scales[index] != 1.0)
+  {
+    temp_d *= attribute_pre_scales[index];
+  }
+  if (attribute_pre_offsets[index] != 0.0)
+  {
+    temp_d -= attribute_pre_offsets[index];
+  }
   if (header.attributes[index].data_type == 1)
   {
     I32 temp_i;
-    F64 temp_d;
-    if (sscanf(l, "%lf", &temp_d) != 1) return FALSE;
     if (header.attributes[index].has_offset())
     {
       temp_d -= header.attributes[index].offset[0];
@@ -1027,8 +1052,6 @@ BOOL LASreaderTXT::parse_attribute(const char* l, I32 index)
   else if (header.attributes[index].data_type == 2)
   {
     I32 temp_i;
-    F64 temp_d;
-    if (sscanf(l, "%lf", &temp_d) != 1) return FALSE;
     if (header.attributes[index].has_offset())
     {
       temp_d -= header.attributes[index].offset[0];
@@ -1054,8 +1077,6 @@ BOOL LASreaderTXT::parse_attribute(const char* l, I32 index)
   else if (header.attributes[index].data_type == 3)
   {
     I32 temp_i;
-    F64 temp_d;
-    if (sscanf(l, "%lf", &temp_d) != 1) return FALSE;
     if (header.attributes[index].has_offset())
     {
       temp_d -= header.attributes[index].offset[0];
@@ -1081,8 +1102,6 @@ BOOL LASreaderTXT::parse_attribute(const char* l, I32 index)
   else if (header.attributes[index].data_type == 4)
   {
     I32 temp_i;
-    F64 temp_d;
-    if (sscanf(l, "%lf", &temp_d) != 1) return FALSE;
     if (header.attributes[index].has_offset())
     {
       temp_d -= header.attributes[index].offset[0];
@@ -1108,8 +1127,6 @@ BOOL LASreaderTXT::parse_attribute(const char* l, I32 index)
   else if (header.attributes[index].data_type == 5)
   {
     U32 temp_u;
-    F64 temp_d;
-    if (sscanf(l, "%lf", &temp_d) != 1) return FALSE;
     if (header.attributes[index].has_offset())
     {
       temp_d -= header.attributes[index].offset[0];
@@ -1127,8 +1144,6 @@ BOOL LASreaderTXT::parse_attribute(const char* l, I32 index)
   else if (header.attributes[index].data_type == 6)
   {
     I32 temp_i;
-    F64 temp_d;
-    if (sscanf(l, "%lf", &temp_d) != 1) return FALSE;
     if (header.attributes[index].has_offset())
     {
       temp_d -= header.attributes[index].offset[0];
@@ -1145,14 +1160,11 @@ BOOL LASreaderTXT::parse_attribute(const char* l, I32 index)
   }
   else if (header.attributes[index].data_type == 9)
   {
-    F32 temp_f;
-    if (sscanf(l, "%f", &temp_f) != 1) return FALSE;
+    F32 temp_f = (F32)temp_d;
     point.set_attribute(attribute_starts[index], temp_f);
   }
   else if (header.attributes[index].data_type == 10)
   {
-    F64 temp_d;
-    if (sscanf(l, "%lf", &temp_d) != 1) return FALSE;
     point.set_attribute(attribute_starts[index], temp_d);
   }
   else

@@ -13,7 +13,7 @@
   
   COPYRIGHT:
   
-    (c) 2007-2013, martin isenburg, rapidlasso - tools to catch reality
+    (c) 2007-2015, martin isenburg, rapidlasso - fast tools to catch reality
 
     This is free software; you can redistribute and/or modify it under the
     terms of the GNU Lesser General Licence as published by the Free Software
@@ -24,6 +24,7 @@
   
   CHANGE HISTORY:
   
+     3 May 2015 -- updated LASinventory to handle LAS 1.4 content 
     25 December 2010 -- created after swinging in Mara's hammock for hours
   
 ===============================================================================
@@ -37,15 +38,17 @@ class LASinventory
 {
 public:
   BOOL active() const { return (first == FALSE); }; 
-  U32 number_of_point_records;
-  U32 number_of_points_by_return[8];
+  I64 extended_number_of_point_records;
+  I64 extended_number_of_points_by_return[16];
   I32 max_X;
   I32 min_X;
   I32 max_Y;
   I32 min_Y;
   I32 max_Z;
   I32 min_Z;
+  BOOL init(const LASheader* header);
   BOOL add(const LASpoint* point);
+  BOOL update_header(LASheader* header) const;
   LASinventory();
 private:
   BOOL first;
@@ -69,6 +72,7 @@ public:
   I64 xyz_fluff_10[3];
   I64 xyz_fluff_100[3];
   I64 xyz_fluff_1000[3];
+  I64 xyz_fluff_10000[3];
   BOOL add(const LASpoint* point);
   BOOL has_fluff() const { return has_fluff(0) || has_fluff(1) || has_fluff(2); };
   BOOL has_fluff(U32 i) const { return (number_of_point_records && (number_of_point_records == xyz_fluff_10[i])); };
@@ -76,6 +80,8 @@ public:
   BOOL has_serious_fluff(U32 i) const { return (number_of_point_records && (number_of_point_records == xyz_fluff_100[i])); };
   BOOL has_very_serious_fluff() const { return has_very_serious_fluff(0) || has_very_serious_fluff(1) || has_very_serious_fluff(2); };
   BOOL has_very_serious_fluff(U32 i) const { return (number_of_point_records && (number_of_point_records == xyz_fluff_1000[i])); };
+  BOOL has_extremely_serious_fluff() const { return has_extremely_serious_fluff(0) || has_extremely_serious_fluff(1) || has_extremely_serious_fluff(2); };
+  BOOL has_extremely_serious_fluff(U32 i) const { return (number_of_point_records && (number_of_point_records == xyz_fluff_10000[i])); };
   LASsummary();
 private:
   BOOL first;
@@ -88,16 +94,19 @@ public:
   void add(I64 item);
   void add(F64 item);
   void add(I32 item, I32 value);
+  void add(F64 item, F64 value);
   void report(FILE* file, const CHAR* name=0, const CHAR* name_avg=0) const;
   void reset();
   F32 get_step() const;
-  LASbin(F32 step);
+  LASbin(F32 step, F32 clamp_min=F32_MIN, F32 clamp_max=F32_MAX);
   ~LASbin();
 private:
   void add_to_bin(I32 bin);
   F64 total;
   I64 count;
   F32 step;
+  F32 clamp_min;
+  F32 clamp_max;
   F32 one_over_step;
   BOOL first;
   I32 anker;

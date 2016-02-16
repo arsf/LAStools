@@ -13,7 +13,7 @@
   
   COPYRIGHT:
   
-    (c) 2007-2012, martin isenburg, rapidlasso - tools to catch reality
+    (c) 2007-2015, martin isenburg, rapidlasso - fast tools to catch reality
 
     This is free software; you can redistribute and/or modify it under the
     terms of the GNU Lesser General Licence as published by the Free Software
@@ -35,11 +35,13 @@
 
 #include "lasdefinitions.hpp"
 
+class LASfilter;
+
 class LASoperation
 {
 public:
-  virtual const char * name() const = 0;
-  virtual int get_command(char* string) const = 0;
+  virtual const CHAR * name() const = 0;
+  virtual int get_command(CHAR* string) const = 0;
   virtual void transform(LASpoint* point) const = 0;
   virtual ~LASoperation(){};
 };
@@ -53,8 +55,12 @@ public:
   void usage() const;
   void clean();
   BOOL parse(int argc, char* argv[]);
-  I32 unparse(char* string) const;
+  BOOL parse(CHAR* string);
+  I32 unparse(CHAR* string) const;
   inline BOOL active() const { return (num_operations != 0); };
+  inline BOOL filtered() const { return is_filtered; };
+
+  void setFilter(LASfilter* filter);
 
   void setPointSource(U16 value);
 
@@ -69,6 +75,8 @@ private:
   U32 num_operations;
   U32 alloc_operations;
   LASoperation** operations;
+  BOOL is_filtered;
+  LASfilter* filter;
 };
 
 #endif

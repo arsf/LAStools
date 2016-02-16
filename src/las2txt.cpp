@@ -28,6 +28,8 @@
   
   CHANGE HISTORY:
   
+    24 April 2015 -- added 'k'eypoint and 'o'verlap flags for the parse string
+    30 March 2015 -- support LAS 1.4 extended return counts and number of returns 
     25 October 2011 -- changed LAS 1.3 parsing to use new LASwaveform13reader
     17 May 2011 -- enabling batch processing with wildcards or multiple file names
     13 May 2011 -- moved indexing, filtering, transforming into LASreader
@@ -125,14 +127,14 @@ static void lidardouble2string(CHAR* string, double value)
 
 static void lidardouble2string(CHAR* string, double value, double precision)
 {
-  if (precision == 0.1)
-    sprintf(string, "%.1f", value);
-  else if (precision == 0.01)
+  if (precision == 0.01)
     sprintf(string, "%.2f", value);
   else if (precision == 0.001)
     sprintf(string, "%.3f", value);
   else if (precision == 0.0001)
     sprintf(string, "%.4f", value);
+  else if (precision == 0.1)
+    sprintf(string, "%.1f", value);
   else if (precision == 0.00001)
     sprintf(string, "%.5f", value);
   else if (precision == 0.000001)
@@ -143,6 +145,18 @@ static void lidardouble2string(CHAR* string, double value, double precision)
     sprintf(string, "%.8f", value);
   else if (precision == 0.000000001)
     sprintf(string, "%.9f", value);
+  else if (precision == 0.0025)
+    sprintf(string, "%.4f", value);
+  else if (precision == 0.00025)
+    sprintf(string, "%.5f", value);
+  else if (precision == 0.000025)
+    sprintf(string, "%.6f", value);
+  else if (precision == 0.005)
+    sprintf(string, "%.3f", value);
+  else if (precision == 0.0005)
+    sprintf(string, "%.4f", value);
+  else if (precision == 0.00005)
+    sprintf(string, "%.5f", value);
   else
     lidardouble2string(string, value);
 }
@@ -273,6 +287,44 @@ static BOOL print_attribute(FILE* file, const LASheader* header, const LASpoint*
       fprintf(file, "%d", value);
     }
   }
+  else if (header->attributes[index].data_type == 7)
+  {
+    U64 value;
+    point->get_attribute(attribute_starts[index], value);
+    if (header->attributes[index].has_scale() || header->attributes[index].has_offset())
+    {
+      F64 temp_d = header->attributes[index].scale[0]*((I64)value) + header->attributes[index].offset[0];
+      lidardouble2string(printstring, temp_d, header->attributes[index].scale[0]);
+      fprintf(file, "%s", printstring);
+    }
+    else
+    {
+#ifdef _WIN32
+        fprintf(file, "%I64d", (I64)value);
+#else
+        fprintf(file, "%lld", (I64)value);
+#endif
+    }
+  }
+  else if (header->attributes[index].data_type == 8)
+  {
+    I64 value;
+    point->get_attribute(attribute_starts[index], value);
+    if (header->attributes[index].has_scale() || header->attributes[index].has_offset())
+    {
+      F64 temp_d = header->attributes[index].scale[0]*value + header->attributes[index].offset[0];
+      lidardouble2string(printstring, temp_d, header->attributes[index].scale[0]);
+      fprintf(file, "%s", printstring);
+    }
+    else
+    {
+#ifdef _WIN32
+        fprintf(file, "%I64d", value);
+#else
+        fprintf(file, "%lld", value);
+#endif
+    }
+  }
   else if (header->attributes[index].data_type == 9)
   {
     F32 value;
@@ -350,7 +402,7 @@ int main(int argc, char *argv[])
 #ifdef COMPILE_WITH_GUI
     return las2txt_gui(argc, argv, 0);
 #else
-    fprintf(stderr,"las2txt.exe is better run in the command line or via the lastool.exe GUI\n");
+    fprintf(stderr,"%s is better run in the command line\n", argv[0]);
     CHAR file_name[256];
     fprintf(stderr,"enter input file: "); fgets(file_name, 256, stdin);
     file_name[strlen(file_name)-1] = '\0';
@@ -776,6 +828,17 @@ int main(int argc, char *argv[])
       fprintf(file_out, "%c offset x y z               ", header_comment_sign); lidardouble2string(printstring, header->x_offset); fprintf(file_out, "%s ", printstring);  lidardouble2string(printstring, header->y_offset); fprintf(file_out, "%s ", printstring);  lidardouble2string(printstring, header->z_offset); fprintf(file_out, "%s\012", printstring);
       fprintf(file_out, "%c min x y z                  ", header_comment_sign); lidardouble2string(printstring, header->min_x, header->x_scale_factor); fprintf(file_out, "%s ", printstring); lidardouble2string(printstring, header->min_y, header->y_scale_factor); fprintf(file_out, "%s ", printstring); lidardouble2string(printstring, header->min_z, header->z_scale_factor); fprintf(file_out, "%s\012", printstring);
       fprintf(file_out, "%c max x y z                  ", header_comment_sign); lidardouble2string(printstring, header->max_x, header->x_scale_factor); fprintf(file_out, "%s ", printstring); lidardouble2string(printstring, header->max_y, header->y_scale_factor); fprintf(file_out, "%s ", printstring); lidardouble2string(printstring, header->max_z, header->z_scale_factor); fprintf(file_out, "%s\012", printstring);
+      // if LAS 1.4
+      if (header->version_minor >= 4)
+      {
+#ifdef _WIN32
+        fprintf(file_out, "%c extended number of point records    %I64d\012", header_comment_sign, header->extended_number_of_point_records);
+        fprintf(file_out, "%c extended number of points by return %I64d %I64d %I64d %I64d %I64d %I64d %I64d %I64d %I64d %I64d %I64d %I64d %I64d %I64d %I64d\012", header_comment_sign, header->extended_number_of_points_by_return[0], header->extended_number_of_points_by_return[1], header->extended_number_of_points_by_return[2], header->extended_number_of_points_by_return[3], header->extended_number_of_points_by_return[4], header->extended_number_of_points_by_return[5], header->extended_number_of_points_by_return[6], header->extended_number_of_points_by_return[7], header->extended_number_of_points_by_return[8], header->extended_number_of_points_by_return[9], header->extended_number_of_points_by_return[10], header->extended_number_of_points_by_return[11], header->extended_number_of_points_by_return[12], header->extended_number_of_points_by_return[13], header->extended_number_of_points_by_return[14]);
+#else
+        fprintf(file_out, "%c extended number of point records    %lld\012", header_comment_sign, header->extended_number_of_point_records);
+        fprintf(file_out, "%c extended number of points by return %lld %lld %lld %lld %lld %lld %lld %lld %lld %lld %lld %lld %lld %lld %lld\012", header_comment_sign, header->extended_number_of_points_by_return[0], header->extended_number_of_points_by_return[1], header->extended_number_of_points_by_return[2], header->extended_number_of_points_by_return[3], header->extended_number_of_points_by_return[4], header->extended_number_of_points_by_return[5], header->extended_number_of_points_by_return[6], header->extended_number_of_points_by_return[7], header->extended_number_of_points_by_return[8], header->extended_number_of_points_by_return[9], header->extended_number_of_points_by_return[10], header->extended_number_of_points_by_return[11], header->extended_number_of_points_by_return[12], header->extended_number_of_points_by_return[13], header->extended_number_of_points_by_return[14]);
+#endif
+      }
     }
 
     // maybe create default parse string
@@ -803,6 +866,8 @@ int main(int argc, char *argv[])
       case 'p': // the point source ID
       case 'e': // the edge of flight line flag
       case 'd': // the direction of scan flag
+      case 'k': // the keypoint flag
+      case 'o': // // the (extended) overlap flag
       case 'm': // the index of the point (count starts at 0)
       case 'M': // the index of the point (count starts at 0)
         break;
@@ -812,15 +877,19 @@ int main(int argc, char *argv[])
         break;
       case 'R': // the red channel of the RGB field
         if (lasreader->point.have_rgb == false)
-          fprintf (stderr, "WARNING: requested 'R' but points do not have rgb\n");
+          fprintf (stderr, "WARNING: requested 'R' but points do not have RGB\n");
         break;
       case 'G': // the green channel of the RGB field
         if (lasreader->point.have_rgb == false)
-          fprintf (stderr, "WARNING: requested 'G' but points do not have rgb\n");
+          fprintf (stderr, "WARNING: requested 'G' but points do not have RGB\n");
         break;
       case 'B': // the blue channel of the RGB field
         if (lasreader->point.have_rgb == false)
-          fprintf (stderr, "WARNING: requested 'B' but points do not have rgb\n");
+          fprintf (stderr, "WARNING: requested 'B' but points do not have RGB\n");
+        break;
+      case 'I': // the near infrared channel of the RGBI field
+        if (lasreader->point.have_nir == false)
+          fprintf (stderr, "WARNING: requested 'I' but points do not have RGBI\n");
         break;
       case 'w': // the wavepacket index
         if (lasreader->point.have_wavepacket == false)
@@ -940,19 +1009,47 @@ int main(int argc, char *argv[])
             fprintf(file_out, "%d", lasreader->point.get_intensity());
           break;
         case 'a': // the scan angle
-          fprintf(file_out, "%d", lasreader->point.get_scan_angle_rank());
+          fprintf(file_out, "%g", lasreader->point.get_scan_angle());
           break;
         case 'r': // the number of the return
-          fprintf(file_out, "%d", lasreader->point.get_return_number());
+          if (header->point_data_format > 5)
+          {
+            fprintf(file_out, "%d", lasreader->point.get_extended_return_number());
+          }
+          else
+          {
+            fprintf(file_out, "%d", lasreader->point.get_return_number());
+          }
           break;
         case 'c': // the classification
-          fprintf(file_out, "%d", lasreader->point.get_classification());
+          if (header->point_data_format > 5)
+          {
+            if (lasreader->point.get_extended_classification())
+            {
+              fprintf(file_out, "%d", lasreader->point.get_extended_classification());
+            }
+            else
+            {
+              fprintf(file_out, "%d", lasreader->point.get_classification());
+            }
+          }
+          else
+          {
+            fprintf(file_out, "%d", lasreader->point.get_classification());
+          }
           break;
         case 'u': // the user data
           fprintf(file_out, "%d", lasreader->point.get_user_data());
           break;
         case 'n': // the number of returns of given pulse
-          fprintf(file_out, "%d", lasreader->point.get_number_of_returns());
+          if (header->point_data_format > 5)
+          {
+            fprintf(file_out, "%d", lasreader->point.get_extended_number_of_returns());
+          }
+          else
+          {
+            fprintf(file_out, "%d", lasreader->point.get_number_of_returns());
+          }
           break;
         case 'p': // the point source ID
           fprintf(file_out, "%d", lasreader->point.get_point_source_ID());
@@ -963,6 +1060,12 @@ int main(int argc, char *argv[])
         case 'd': // the direction of scan flag
           fprintf(file_out, "%d", lasreader->point.get_scan_direction_flag());
           break;
+        case 'k': // the keypoint flag
+          fprintf(file_out, "%d", lasreader->point.get_keypoint_flag());
+          break;
+        case 'o': // the (extended) overlap flag
+          fprintf(file_out, "%d", lasreader->point.get_extended_overlap_flag());
+          break;
         case 'R': // the red channel of the RGB field
           fprintf(file_out, "%d", lasreader->point.rgb[0]);
           break;
@@ -971,6 +1074,9 @@ int main(int argc, char *argv[])
           break;
         case 'B': // the blue channel of the RGB field
           fprintf(file_out, "%d", lasreader->point.rgb[2]);
+          break;
+        case 'I': // the near-infrared channel of the RGBI field
+          fprintf(file_out, "%d", lasreader->point.rgb[3]);
           break;
         case 'm': // the index of the point (count starts at 0)
 #ifdef _WIN32

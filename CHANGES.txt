@@ -1,3 +1,65 @@
+24 January 2015 -- txt2las: better support for storing attributes in "Extra Bytes with '-add_attribute'
+24 January 2015 -- NEW: laspublish to visualize and download LiDAR in a Web browser with Potree
+19 January 2016 -- LASlib: new transform to '-scale_rgb 1.5 2.1 1.8' 
+19 January 2015 -- NEW: lasreturn repairs 'number of returns'. geometrically analyzes multi-returns
+10 January 2016 -- all GUIs: edit ".\LAStools\bin\serf\geo\my_epsg.csv" to add your own EPSG codes
+ 9 January 2016 -- LAStools: also parse 'gcs.csv' file whenever an unknown datum is encountered
+ 6 January 2016 -- lasgrid, las2dem: can raster '-attribute [0|1|2...]' stored as "Extra Bytes"
+ 4 January 2016 -- lasground: option '-by_flightline' allows to classify flightlines separately
+ 2 January 2016 -- LAStools: parse 'pcs.csv' file whenever an unknown EPSG code is encountered
+ 1 January 2016 -- las2las & txt2las: create OGC WKT string for CRS for full LAS 1.4 compliance 
+ 1 January 2016 -- all GUIs: can create a directory when browsing for one via pop-up window
+20 December 2015 -- LAStools: new EPSG codes 2945(MTM3) to 2952 (MTM10) and 3753/3754 (Ohio)
+18 December 2015 -- lastile: attempted fix of "excessive empty tile" problem in multi-core mode
+6 December 2015 -- lasboundary: new '-use_tile_bb' and '-largest_only' (only with '-use_lax')
+6 December 2015 -- lasoverlap: new '-use_tile_bb' to easier process buffered tiles
+9 October 2015 -- lasground, lasclassify: now '-feet' and '-elevation_feet' works with '-cores 2'
+9 October 2015 -- lasclip: fixed bug introduced for '-split' option in version 150924
+25 September 2015 -- LASlib: disabling auto-upgrade to LAS 1.4 introduced in 150924. now it just warns.
+24 September 2015 -- prototype implementing "uprising" of the n>1 returns against 1st return supremacy
+24 September 2015 -- lasclip: new options '-ignore_first_of_many', '-ignore_intermediate', '-ignore_single' ...
+24 September 2015 -- LASlib: upgrade to LAS 1.4 when '-merged'ing more points than older LAS allows
+24 September 2015 -- LASlib: consistant zeroing of legacy counters for new LAS 1.4 point types
+24 September 2015 -- LASzip: better DLL supports streaming and "extra bytes" in "compatibility mode"
+24 September 2015 -- lasclip: fixed bug for '-split' that was introduced in version 150828 
+24 September 2015 -- las2tin: new option '-histo edge_length 0.1' or '-histo edge_length_max 0.1'
+28 August 2015 -- lasinfo: option '-repair_counters' corrected for 64 bit counters of LAS 1.4 files
+28 August 2015 -- lasthin: added option '-central' to keep the most central point of each cell
+21 August 2015 -- lascontrol: adjust z coodinate using mean error with new LAS/LAZ or LAY files
+21 August 2015 -- lasgrid: new '-invert_ramp' for '-false' and '-gray' colorings
+20 August 2015 -- LASlayers: using '-olay' with a filter or transform adds them to the LAY file
+19 August 2015 -- lasground: new '-bulge 1.0' offers more control for what is added to the ground
+19 August 2015 -- lastile: new '-flag_as_withheld' or '-flag_as_synthetic' for buffer points
+
+19 August 2015 -- lastile: multi-core tiling to be used with spatially indexed input
+18 August 2015 -- lasdiff: fixed report for truncated files (fewer or more points) 
+1 August 2015 -- LASlib: moving LASpoint, LASquantizer, and LASattributer to LASzip for "compatibility"
+31 July 2015 -- LASzip: new DLL (incompatible with prior version) supports "LAS 1.4 compatibility mode"
+25 July 2015 -- LAStools: EPSG codes (http://groups.google.com/d/topic/lastools/9fUZaLKPReg/discussion)
+30 June 2015 -- las2tin: new option '-histo_edge_length 0.1' and '-histo_edge_length_only 0.1'
+30 June 2015 -- lasclassify: little bug fix after introduction of '-keep_overlap' filter for LAS 1.4
+6 June 2015 -- LASlib: added filters '-keep_overlap' and '-drop_overlap' for new LAS 1.4 point types
+6 June 2015 -- lasoverage: added option '-flag_as_overlap' for new LAS 1.4 point types 6 to 10
+26 May 2015 -- BLAST extension: updated to support recent additions for new LAS 1.4 point types
+26 May 2015 -- laszip: small bug fix for combination of '-cores n' with '-io_ibuffer xxxxxx'
+26 May 2015 -- all LAStools: error message for on-the-fly compression of new LAS 1.4 point types
+26 May 2015 -- lastile: small fix sets file source ID to 0 when tiling many flightlines into tiles
+26 May 2015 -- GUIs: fixed execution path issue when starting tool via "Windows Explorer search bar"
+20 May 2015 -- lassplit: fixed serious bug introduced in version 150516
+16 May 2015 -- all LAStools: projections Albers Equal Area Conic and Earth Centered Earth Fixed
+15 May 2015 -- lasclip: added '-flag_as_withheld' as an alternative to removing or reclassifying
+15 May 2015 -- lasoverage: added option '-recover_flightlines' for missing point_source_IDs
+14 May 2015 -- lasinfo: added a new option '-set_GUID F794F8A4-A23E-421E-A134-ACF7754E1C54'
+10 May 2015 -- lasoverlap: new '-min_diff 0.2' with '-max_diff 0.5' for more focused error coloring
+3 May 2015 -- las2las: improved up-conversion to LAS 1.4 via '-set_version 1.4 -point_type 6'
+24 April 2015 -- las2txt: added 'k'eypoint and 'o'verlap flags as new parse string options
+24 April 2015 -- lasoverage: added 'flag_as_overlap' for the new flag in the LAS 1.4 point types
+4 April 2015 -- LASzip DLL: added functions for creation and exploitation of spatial index files
+3 April 2015 -- LASlib: moved spatial indexing (LAX file generation) from LASlib to LASzip 
+30 March 2015 -- NEW: toolbox for ERDAS IMAGINE 2014 
+30 March 2015 -- laszip: compresses and decompresses LAS 1.4 files via new "compatibility mode"
+30 March 2015 -- GUIs: delete multiple files: pick a (red) box covering them and press <delete> 
+30 March 2015 -- las2txt: correct ASCII output for extended attributes of new LAS 1.4 point types
 04 March 2015 -- lasduplicate: new option to remove exact duplicates *and* '-nearby 0.005' points
 04 March 2015 -- GUIs: simultaneous use of '-lof' multi-file processing with unique'file_name.xxx.txt' 
 2 February 2015 -- IMPORTANT: lasgrid, lasground, ...: fixed little bug introduced in version 150131

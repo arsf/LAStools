@@ -10,11 +10,14 @@
   or '-intensity' of each point and can compute the '-lowest' or
   the '-highest', the '-average', or the standard deviation
   '-stddev', as well as the '-range'.
-
+ 
   Other gridding options are '-scan_angle_abs', '-scan_angle',
+  '-point_density', '-point_density_16bit', '-point_density_32bit', 
   '-counter', '-counter_16bit', '-counter_32bit', '-user_data',
   '-point_source', '-rgb', '-number_returns' and more. See the
-  end for a complete list.
+  end for a complete list. Additional attributes that some LAS
+  or LAZ files sometimes store as "Extra Bytes" can be gridded
+  with '-attribute 0' or '-attribute 1' or '-attribute 2' ...
 
   This tool can read BILLIONS of points very efficiently. By
   default it uses only 1000MB of main memory. You can increase
@@ -28,7 +31,8 @@
   PNG, and JPG one usually chooses to express the variation with
   '-gray' or with '-false' colors for simple visualizion. Here
   the variation can be limited with '-set_min_max 10 100' to a
-  particular range or it can be set to '-compute_min_max'.
+  particular range or it can be set to '-compute_min_max'. The
+  color scheme can also be inverted with '-invert_ramp'
 
   Optionally, a KML file is generated that allows the resulting
   raster  to be immediately displayed inside a geospatial context
@@ -192,9 +196,12 @@ other commandline arguments are
 -lowest -low -min      : for each grid cell keep lowest value
 -average -avg -mean    : for each grid cell compute average
 -stddev -std           : for each grid cell compute standard deviation
--counter               : count point densities with an 8 bit counter
--counter_16bit         : count point densities with a 16 bit counter
--counter_32bit         : count point densities with a 32 bit counter
+-counter               : counts points per cell with an 8 bit counter
+-counter_16bit         : counts points per cell with a 16 bit counter
+-counter_32bit         : counts points per cell with a 32 bit counter
+-point_density         : computes area-normalized point densities with an 8 bit counter
+-point_density_16bit   : computes area-normalized point densities with a 16 bit counter
+-point_density_32bit   : computes area-normalized point densities with a 32 bit counter
 -scan_angle_lowest     : for each grid cell keep lowest scan angle value 
 -scan_angle_highest    : for each grid cell keep highest scan angle value 
 -scan_angle_abs_lowest : for each grid cell keep lowest absolute scan angle value 
@@ -414,9 +421,9 @@ Supported raster operations
   -number_returns_average
   -number_returns_stddev
   -occupancy
-  -count
-  -count_16bit
-  -count_32bit
+  -counter
+  -counter_16bit
+  -counter_32bit
   -scan_angle_lowest
   -scan_angle_highest
   -scan_angle_range

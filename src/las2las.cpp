@@ -22,7 +22,7 @@
   
   COPYRIGHT:
   
-    (c) 2007-14, martin isenburg, rapidlasso - fast tools to catch reality
+    (c) 2007-2015, martin isenburg, rapidlasso - fast tools to catch reality
 
     This is free software; you can redistribute and/or modify it under the
     terms of the GNU Lesser General Licence as published by the Free Software
@@ -33,6 +33,8 @@
   
   CHANGE HISTORY:
   
+     1 January 2016 -- option '-set_ogc_wkt' to store CRS as OGC WKT string
+     3 May 2015 -- improved up-conversion via '-set_version 1.4 -point_type 6'
      5 July 2012 -- added option to '-remove_original_vlr' 
      6 May 2012 -- added option to '-remove_tiling_vlr' 
      5 January 2012 -- added option to clip points to the bounding box
@@ -73,7 +75,7 @@ static void usage(bool error=false, bool wait=false)
   fprintf(stderr,"las2las -remove_vlr 2 -scale_rgb_up -i in.las -o out.las\n");
   fprintf(stderr,"las2las -i in.las -keep_xy 630000 4834500 630500 4835000 -keep_z 10 100 -o out.las\n");
   fprintf(stderr,"las2las -i in.txt -iparse xyzit -keep_circle 630200 4834750 100 -oparse xyzit -o out.txt\n");
-  fprintf(stderr,"las2las -i in.las -keep_scan_angle -15 15 -o out.las\n");
+  fprintf(stderr,"las2las -i in.las -remove_padding -keep_scan_angle -15 15 -o out.las\n");
   fprintf(stderr,"las2las -i in.las -rescale 0.01 0.01 0.01 -reoffset 0 300000 0 -o out.las\n");
   fprintf(stderr,"las2las -i in.las -set_version 1.2 -keep_gpstime 46.5 47.5 -o out.las\n");
   fprintf(stderr,"las2las -i in.las -drop_intensity_below 10 -olaz -stdout > out.laz\n");
@@ -145,7 +147,8 @@ int main(int argc, char *argv[])
   int set_point_data_record_length = -1;
   int set_gps_time_endcoding = -1;
   // variable header changes
-  bool remove_extra_header = false;
+  bool set_ogc_wkt = false;
+  bool remove_header_padding = false;
   bool remove_all_variable_length_records = false;
   int remove_variable_length_record = -1;
   int remove_variable_length_record_from = -1;
@@ -168,7 +171,7 @@ int main(int argc, char *argv[])
 #ifdef COMPILE_WITH_GUI
     return las2las_gui(argc, argv, 0);
 #else
-    fprintf(stderr,"las2las.exe is better run in the command line or via the lastool.exe GUI\n");
+    fprintf(stderr,"%s is better run in the command line\n", argv[0]);
     char file_name[256];
     fprintf(stderr,"enter input file: "); fgets(file_name, 256, stdin);
     file_name[strlen(file_name)-1] = '\0';
@@ -310,9 +313,13 @@ int main(int argc, char *argv[])
       set_version_minor = atoi(argv[i+1]);
       i+=1;
     }
-    else if (strcmp(argv[i],"-remove_extra") == 0)
+    else if (strcmp(argv[i],"-remove_padding") == 0 || strcmp(argv[i],"-remove_extra") == 0)
     {
-      remove_extra_header = true;
+      remove_header_padding = true;
+    }
+    else if (strcmp(argv[i],"-set_ogc_wkt") == 0)
+    {
+      set_ogc_wkt = true;
     }
     else if (strcmp(argv[i],"-remove_all_vlrs") == 0)
     {
@@ -736,7 +743,7 @@ int main(int argc, char *argv[])
 
     // maybe we should remove some stuff
 
-    if (remove_extra_header)
+    if (remove_header_padding)
     {
       lasreader->header.clean_user_data_in_header();
       lasreader->header.clean_user_data_after_header();
@@ -819,6 +826,51 @@ int main(int argc, char *argv[])
         }
         lasreader->header.del_geo_ascii_params();
       }
+
+      if (set_ogc_wkt) // maybe also set the OCG WKT 
+      {
+        I32 len = 0;
+        CHAR* ogc_wkt = 0;
+        if (geoprojectionconverter.get_ogc_wkt_from_projection(len, &ogc_wkt, !geoprojectionconverter.has_projection(false)))
+        {
+          lasreader->header.set_geo_wkt_ogc_cs(len, ogc_wkt);
+          free(ogc_wkt);
+          if ((lasreader->header.version_minor >= 4) && (lasreader->header.point_data_format >= 6))
+          {
+            lasreader->header.set_global_encoding_bit(LAS_TOOLS_GLOBAL_ENCODING_BIT_OGC_WKT_CRS);
+          }
+        }
+        else
+        {
+          fprintf(stderr, "WARNING: cannot produce OCG WKT. ignoring '-set_ogc_wkt' for '%s'\n", lasreadopener.get_file_name());
+        }
+      }
+    }
+    else if (set_ogc_wkt) // maybe only set the OCG WKT 
+    {
+      if (lasreader->header.vlr_geo_keys)
+      {
+        geoprojectionconverter.set_projection_from_geo_keys(lasreader->header.vlr_geo_keys[0].number_of_keys, (GeoProjectionGeoKeys*)lasreader->header.vlr_geo_key_entries, lasreader->header.vlr_geo_ascii_params, lasreader->header.vlr_geo_double_params);
+        I32 len = 0;
+        CHAR* ogc_wkt = 0;
+        if (geoprojectionconverter.get_ogc_wkt_from_projection(len, &ogc_wkt))
+        {
+          lasreader->header.set_geo_wkt_ogc_cs(len, ogc_wkt);
+          free(ogc_wkt);
+          if ((lasreader->header.version_minor >= 4) && (lasreader->header.point_data_format >= 6))
+          {
+            lasreader->header.set_global_encoding_bit(LAS_TOOLS_GLOBAL_ENCODING_BIT_OGC_WKT_CRS);
+          }
+        }
+        else
+        {
+          fprintf(stderr, "WARNING: cannot produce OCG WKT. ignoring '-set_ogc_wkt' for '%s'\n", lasreadopener.get_file_name());
+        }
+      }
+      else
+      {
+        fprintf(stderr, "WARNING: no projection information. ignoring '-set_ogc_wkt' for '%s'\n", lasreadopener.get_file_name());
+      }
     }
 
     // do we need an extra pass
@@ -867,21 +919,15 @@ int main(int argc, char *argv[])
       }
       lasreader->close();
 
-      lasreader->header.number_of_point_records = lasinventory.number_of_point_records;
-      for (i = 0; i < 5; i++) lasreader->header.number_of_points_by_return[i] = lasinventory.number_of_points_by_return[i+1];
       if (reproject_quantizer) lasreader->header = *reproject_quantizer;
-      lasreader->header.max_x = lasreader->header.get_x(lasinventory.max_X);
-      lasreader->header.min_x = lasreader->header.get_x(lasinventory.min_X);
-      lasreader->header.max_y = lasreader->header.get_y(lasinventory.max_Y);
-      lasreader->header.min_y = lasreader->header.get_y(lasinventory.min_Y);
-      lasreader->header.max_z = lasreader->header.get_z(lasinventory.max_Z);
-      lasreader->header.min_z = lasreader->header.get_z(lasinventory.min_Z);
+
+      lasinventory.update_header(&lasreader->header);
 
       if (verbose) { fprintf(stderr,"extra pass took %g sec.\n", taketime()-start_time); start_time = taketime(); }
 #ifdef _WIN32
-      if (verbose) fprintf(stderr, "piped output: reading %I64d and writing %u points ...\n", lasreader->npoints, lasinventory.number_of_point_records);
+      if (verbose) fprintf(stderr, "piped output: reading %I64d and writing %I64d points ...\n", lasreader->npoints, lasinventory.extended_number_of_point_records);
 #else
-      if (verbose) fprintf(stderr, "piped output: reading %lld and writing %u points ...\n", lasreader->npoints, lasinventory.number_of_point_records);
+      if (verbose) fprintf(stderr, "piped output: reading %lld and writing %lld points ...\n", lasreader->npoints, lasinventory.extended_number_of_point_records);
 #endif
     }
     else
@@ -1011,7 +1057,7 @@ int main(int argc, char *argv[])
     {
       if (reproject_quantizer) lasreader->header = *reproject_quantizer;
       laswriter->update_header(&lasreader->header, TRUE);
-      if (verbose) { fprintf(stderr,"total time: %g sec. written %u surviving points.\n", taketime()-start_time, (U32)laswriter->p_count); }
+      if (verbose) { fprintf(stderr,"total time: %g sec. written %u surviving points to '%s'.\n", taketime()-start_time, (U32)laswriter->p_count, laswriteopener.get_file_name()); }
     }
     else
     {

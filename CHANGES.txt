@@ -1,5 +1,32 @@
-24 January 2015 -- txt2las: better support for storing attributes in "Extra Bytes with '-add_attribute'
-24 January 2015 -- NEW: laspublish to visualize and download LiDAR in a Web browser with Potree
+6 June 2016 -- lasthin: also GUI shows options for adaptive thinning (e.g. keypoints) and contour thinning
+28 May 2016 -- QGIS 2.14.1: major update to LAStools and LAStools Production toolboxes for QGIS 2.14.1
+20 May 2016 -- las2las: '-move_ancient_to_extended_classification' 5 bits + flags = 8 bit classifications
+15 May 2016 -- LASlib: '-translate_raw_xy_at_random 2 2' perturbes X/Y for faster Delaunay of points on grid
+12 May 2016 -- lasgrid, las2dem, lascanopy: appropiate resolution for X/Y coordinates for XYZ output
+29 April 2016 -- LASlib: don't EXIT but produce WARNINGs when rescale / reoffset overflows integers
+20 April 2016 -- LASlib: new transforms, '-switch_R_G', '-switch_R_B' and '-set_RGB 32768 16384 0'
+14 April 2016 -- lasclassify: added missing '-ignore_class' selection options to the GUI
+14 April 2016 -- lasground: fixed rare crash when classifying flightlines separately with '-by_flightline'
+10 April 2016 -- LASlib: exit with ERROR when '-rescale 0.001 ...' or '-reoffset ...' overflow integer
+ 9 April 2016 -- lasinfo: new option '-set_file_source_ID_from_point_source_ID'
+ 8 April 2016 -- lassort: sort first by GPS time then by return number '-gps_time -return_number'
+28 March 2016 -- laspublish: fixed bug for download (files were copied / moved to wrong location)
+28 March 2016 -- lasthin: added '-adaptive 0.2' for adaptive thinning (e.g. keypoints)
+20 March 2016 -- lasthin: added '-contours 2.0' to farthest from contour for each cell
+19 March 2016 -- BLAST: new '-temp_files h:\temp' specifies where to temp store 'file_list.12345.txt'
+14 March 2016 -- lasthin: fixed bug in '-subcircle 0.2' that sometimes duplicated points
+13 March 2016 -- LASlayers: fixed bug for '-ignore_class 7' when classifying to same class 7
+28 February 2016 -- LASlayers: support for '-filtered_transform' in a transform layer
+28 February 2016 -- LASlib: new filters '-drop_extended_class 42' and '-drop_extended_class 219'
+28 February 2016 -- laspublish: 2D download maps for 'Hotine Oblique Mercator' and 'Oblique Stereoscopic'
+19 February 2016 -- LASlayers: bug fix for delete layers in combination with filters or transform layers
+18 February 2016 -- lasinfo: more useful '-set_number_of_variable_length_records' and friends
+16 February 2016 -- lasclip & lascanopy: avoid crash when SHP file contains completely emtpy records
+7 February 2016 -- las2dem and blast2dem: small bug fix for additional '-scale 2.1' argument
+7 February 2016 -- LAStools: support for EPSG code 4326
+25 January 2016 -- LASlib: brand-new opportunity to do a '-filtered_transform' 
+24 January 2016 -- txt2las: better support for storing attributes in "Extra Bytes with '-add_attribute'
+24 January 2016 -- NEW: laspublish to visualize and download LiDAR in a Web browser with Potree
 19 January 2016 -- LASlib: new transform to '-scale_rgb 1.5 2.1 1.8' 
 19 January 2015 -- NEW: lasreturn repairs 'number of returns'. geometrically analyzes multi-returns
 10 January 2016 -- all GUIs: edit ".\LAStools\bin\serf\geo\my_epsg.csv" to add your own EPSG codes

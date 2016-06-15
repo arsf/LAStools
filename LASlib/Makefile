@@ -3,7 +3,7 @@ EXEC_PREFIX = ${PREFIX}/bin # not used
 INCLUDEDIR = ${PREFIX}/include
 LIBDIR= ${PREFIX}/lib64
 
-export VERSION=20141117
+export VERSION=20160606
 
 all:
 	cd src && make

@@ -22,7 +22,7 @@ lasexample_write_only: lasexample_write_only.o
 	${LINKER} ${BITS} ${COPTS} lasexample_write_only.o -llaslib -o $@ ${LIBS} ${LASLIBS} $(INCLUDE) $(LASINCLUDE)
 
 lasexample_add_rgb: lasexample_add_rgb.o
-	${LINKER} ${BITS} ${COPTS} lasexample_add_rgb.o -llas -o $@ ${LIBS} ${LASLIBS} $(INCLUDE) $(LASINCLUDE)
+	${LINKER} ${BITS} ${COPTS} lasexample_add_rgb.o -llaslib -o $@ ${LIBS} ${LASLIBS} $(INCLUDE) $(LASINCLUDE)
 
 .cpp.o: 
 	${COMPILER} ${BITS} -c ${COPTS} ${INCLUDE} $(LASINCLUDE) $< -o $@
